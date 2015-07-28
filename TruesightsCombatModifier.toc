@@ -1,0 +1,10 @@
+## Interface: 60200
+## Title: TruesightsCombatModifier
+## Notes: RP battle system
+## Author: jakex10sen
+## Version: 0.1
+## SavedVariables: TruesightsCombatModifierDB
+
+embeds.xml
+
+Core.lua
