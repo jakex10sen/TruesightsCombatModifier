@@ -1,5 +1,5 @@
 
-TCM = LibStub("AceAddon-3.0"):NewAddon("TCM", "AceConsole-3.0", "AceComm-3.0");
+TCM = LibStub("AceAddon-3.0"):NewAddon("TCM", "AceConsole-3.0", "AceComm-3.0", "AceSerializer-3.0");
 local AceGUI = LibStub("AceGUI-3.0");
 
 function TCM:OnInitialize()
@@ -79,7 +79,7 @@ function TCM:InitButton()
 end
 
 -- UI functions --
-function TCM:LoadUI()
+function TCM:LoadUI(number)
     
     TCM.BattleFrame = CreateFrame("Frame", "BattleFrame", UIParent);
     TCM.BattleFrame:SetMovable(true);
@@ -100,26 +100,39 @@ function TCM:LoadUI()
     TCM.BattleFrame.StatusBars = {};
     if IsInGroup() then
         for i=1, GetNumGroupMembers() do
-            TCM:Print(GetRaidRosterInfor(i));
-            --local name = GetRaidRosterInfo(i);
-            --TCM:AddPlayerBar(name);
+            local name = GetRaidRosterInfo(i);
+            TCM:AddPlayerBar(name);
         end
+        for i=1, number do
+            TCM:AddBadGuyBar(i);
+        end
+        print(TCM:tablelength(TCM.BattleFrame.StatusBars));
     else
         TCM:Print("Not in group");
     end
-
-
 end
 
 function TCM:AddPlayerBar(name)
     TCM.BattleFrame.StatusBars[name] = CreateFrame("StatusBar", name, TCM.BattleFrame);
     TCM.BattleFrame.StatusBars[name]:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar");
     TCM.BattleFrame.StatusBars[name]:GetStatusBarTexture():SetHorizTile(false);
-    TCM.BattleFrame.StatusBars[name]:SetMinMaxValues(0, 100);
-    TCM.BattleFrame.StatusBars[name]:setWidth(200);
+    TCM.BattleFrame.StatusBars[name]:SetMinMaxValues(0, 6);
+    TCM.BattleFrame.StatusBars[name]:SetWidth(100);
     TCM.BattleFrame.StatusBars[name]:SetHeight(10);
-    TCM.BattleFrame.StatusBars[name]:SetPoint("CENTER", TCM.BattleFrame, "CENTER");
-    TCM.BattleFrame.StatusBars[name]:SetStatusBarColor(1,0,0);
+    TCM.BattleFrame.StatusBars[name]:SetPoint("TOP", TCM.BattleFrame, "CENTER", 0, (TCM:tablelength(TCM.BattleFrame.StatusBars)+1) * 10);
+    TCM.BattleFrame.StatusBars[name]:SetStatusBarColor(0,1,0);
+end
+
+function TCM:AddBadGuyBar(number)
+    local index = "BadGuy" .. number;
+    TCM.BattleFrame.StatusBars[index] = CreateFrame("StatusBar", index, TCM.BattleFrame);
+    TCM.BattleFrame.StatusBars[index]:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar");
+    TCM.BattleFrame.StatusBars[index]:GetStatusBarTexture():SetHorizTile(false);
+    TCM.BattleFrame.StatusBars[index]:SetMinMaxValues(0, 100);
+    TCM.BattleFrame.StatusBars[index]:SetWidth(100);
+    TCM.BattleFrame.StatusBars[index]:SetHeight(10);
+    TCM.BattleFrame.StatusBars[index]:SetPoint("TOP", TCM.BattleFrame, "CENTER", 0, (TCM:tablelength(TCM.BattleFrame.StatusBars)+1) * 10);
+    TCM.BattleFrame.StatusBars[index]:SetStatusBarColor(1,0,0);
 end
 
 function TCM:UpdateUI()
@@ -153,7 +166,7 @@ function TCM:ConfgUI()
     TCM.ConfigScreen.SubmitBtn:SetText("Apply");
     TCM.ConfigScreen.SubmitBtn:SetCallback("OnClick", function(widget)
         --TCM:Print("Num enemies: " .. TCM.ConfigScreen.EnemyNumEditBox:GetText());
-        TCM:LoadUI();
+        TCM:LoadUI(tonumber(TCM.ConfigScreen.EnemyNumEditBox:GetText()));
     end);
 
     TCM.ConfigScreen:AddChild(TCM.ConfigScreen.SubmitBtn);
@@ -177,6 +190,13 @@ function TCM:InitComms()
     TCM:RegisterComm("begin", "HandleBeginFunc");
 end
 
+function TCM:InitBadGuys(number)
+    self.db.char.BadGuys = {};
+    for i=0,number do
+        self.db.char.BadGuys[i] = {};
+        self.db.char.BadGuys[i].health = 4;
+    end
+end
 --Comm handlers --
 function TCM:HandleHealFunc(prefix, message, distribution, sender)
     -- TCM:heal(tonumber(message));
@@ -184,8 +204,16 @@ function TCM:HandleHealFunc(prefix, message, distribution, sender)
 end
 
 function TCM:HandleAttackFunc(prefix, message, distribution, sender)
-    TCM:Print(sender .. " hit you for " .. message .. " points of damage you are now at " .. self.db.char.Character.health);
-    TCM:TakeDamage(tonumber(message));
+    if not sender == UnitName("player") then
+        local success, from, damage, target = TCM:Deserialize(message);
+        if success then
+            if target == UnitName("player") then
+                TCM:Print(from  .. " hit " .. target .. " for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health);
+                SendChatMessage(from  .. " hit you for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health, "RAID");
+                TCM:TakeDamage(tonumber(tonumber(damage)));
+            end
+        end
+    end
 end
 
 function TCM:HandleBeginFunc(prefix, message, distribution, sender)
@@ -194,7 +222,8 @@ function TCM:HandleBeginFunc(prefix, message, distribution, sender)
 end
 
 function TCM:MessageReceived(prefix, message, distribution, sender)
-    TCM:Print("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix);
+    SendChatMessage("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix, "RAID");
+    -- TCM:Print("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix);
 end
 
 -- combat actions --
@@ -281,9 +310,12 @@ end
 
 function TCM:AttackCmd(target)
     if self.db.char.Character.health then
+        local player = UnitName("player");
         local damage = TCM:Attack(target);
+        local targetPlayer = target;
         if damage > 0 then
-            TCM:SendCommMessage("attack", tostring(damage), "WHISPER", target);
+            local data = TCM:Serialize(player, damage, targetPlayer);
+            TCM:SendCommMessage("attack", data, "RAID");
         end
     else
         TCM:Print("use must start a battle with /tcm begin first");
@@ -298,7 +330,7 @@ function TCM:SlashCmds(input)
     elseif(input == "begin")then
         TCM:BeginCmd();
     elseif(input == "health")then
-        SendChatMessage("Health: " .. self.db.char.Character.health, "SAY");
+        SendChatMessage("Health: " .. self.db.char.Character.health, "RAID");
     else
         if(TCM.BtnFrame:IsShown())then
             TCM.BtnFrame:Hide();
@@ -307,4 +339,9 @@ function TCM:SlashCmds(input)
         end
 
     end
+end
+function TCM:tablelength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
 end
