@@ -18,15 +18,13 @@ function TCM:OnDisable()
 end
 
 function TCM:InitButton()
-
     TCM.BtnFrame = CreateFrame("Frame", "BtnFrame", UIParent);
     TCM.BtnFrame:SetMovable(true);
     TCM.BtnFrame:EnableMouse(true);
     TCM.BtnFrame:RegisterForDrag("LeftButton");
     TCM.BtnFrame:SetScript("OnDragStart", TCM.BtnFrame.StartMoving);
     TCM.BtnFrame:SetScript("OnDragStop", TCM.BtnFrame.StopMovingOrSizing);
-    
-    
+
     -- The code below makes the frame visible, and is not necessary to enable dragging.
     TCM.BtnFrame:SetPoint("CENTER");
     TCM.BtnFrame:SetWidth(50);
@@ -43,12 +41,7 @@ function TCM:InitButton()
     BeginBtn:SetText("begin");
     BeginBtn:RegisterForClicks("AnyUp");
     BeginBtn:SetScript("OnClick", function()
-        if not UnitName("target") then
-            TCM:Print("No target found");
-        else
-            TCM:BeginCmd(UnitName("target"));
-        end
-
+        TCM:BeginCmd();
     end);
 
     local AttackBtn = CreateFrame("Button", "AttackBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
@@ -130,8 +123,8 @@ function TCM:AddPlayerBar(name)
 end
 
 function TCM:UpdateUI()
-    print(TCM.BattleFrame:GetNumChildren());
-    print(TCM.BattleFrame:GetNumRegions());
+    TCM:Print(TCM.BattleFrame:GetNumChildren());
+    TCM:Print(TCM.BattleFrame:GetNumRegions());
 end
 
 function TCM:ConfgUI()
@@ -186,40 +179,44 @@ end
 
 --Comm handlers --
 function TCM:HandleHealFunc(prefix, message, distribution, sender)
-    TCM:heal(tonumber(message));
-   -- TCM:Print("Prefix: " .. prefix .. "\nMessage: " .. message .. "\nDistribution: " .. distribution .. "\nSender: " .. sender);
+    -- TCM:heal(tonumber(message));
+    TCM:MessageReceived(prefix, message, distribution, sender);
 end
 
 function TCM:HandleAttackFunc(prefix, message, distribution, sender)
-    TCM:Print(sender .. " hit you for " .. message .. " points of damage you are now at " .. self.db.char.health);
+    TCM:Print(sender .. " hit you for " .. message .. " points of damage you are now at " .. self.db.char.Character.health);
     TCM:TakeDamage(tonumber(message));
-   -- TCM:Print("Prefix: " .. prefix .. "\nMessage: " .. message .. "\nDistribution: " .. distribution .. "\nSender: " .. sender);
 end
 
 function TCM:HandleBeginFunc(prefix, message, distribution, sender)
     TCM:begin();
-   -- TCM:Print("Prefix: " .. prefix .. "\nMessage: " .. message .. "\nDistribution: " .. distribution .. "\nSender: " .. sender);
+    TCM:MessageReceived(prefix, message, distribution, sender);
+end
+
+function TCM:MessageReceived(prefix, message, distribution, sender)
+    TCM:Print("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix);
 end
 
 -- combat actions --
 function TCM:begin()
-    self.db.char.maxhealth = 6;
-    self.db.char.health = 6;
-    self.db.char.heal = 20;
-    self.db.char.attack = 20;
+    self.db.char.Character = {};
+    self.db.char.Character.maxhealth = 6;
+    self.db.char.Character.health = 6;
+    self.db.char.Character.heal = 20;
+    self.db.char.Character.attack = 20;
 end
 
 function TCM:TakeDamage(amount)
-    if(self.db.char.health - amount <=0) then
-        self.db.char.health = 0;
+    if(self.db.char.Character.health - amount <=0) then
+        self.db.char.Character.health = 0;
     else
-        self.db.char.health = self.db.char.health - amount;
+        self.db.char.Character.health = self.db.char.Character.health - amount;
     end
 end
 
 
 function TCM:Attack(target)
-    local attack = math.random(self.db.char.attack);
+    local attack = math.random(self.db.char.Character.attack);
     if attack <= 2 then
         TCM:Print("Epic Fail. AKA, Take 2 damage from " .. target);
         TCM:TakeDamage(2);
@@ -250,27 +247,31 @@ function TCM:Attack(target)
 end
 
 function TCM:heal(heal)
-    if(self.db.char.health + heal >= self.db.char.maxhealth)then
-        self.db.char.health = self.db.char.maxhealth;
+    if(self.db.char.Character.health + heal >= self.db.char.Character.maxhealth)then
+        self.db.char.Character.health = self.db.char.Character.maxhealth;
     else
-        self.db.char.health = self.db.char.health + heal; 
+        self.db.char.Character.health = self.db.char.Character.health + heal;
     end
     TCM:UpdateUI();
 end
 
 -- slash command handlers --
-function TCM:BeginCmd(target)
-    TCM:ConfgUI();
+function TCM:BeginCmd()
     TCM:begin();
-    TCM:SendCommMessage("begin", "begin", "WHISPER", target);
+    if(UnitIsGroupLeader("player"))then
+        TCM:ConfgUI();
+        TCM:SendCommMessage("begin", "begin", "RAID");
+    else
+        TCM:Print("You aren't the leader");
+    end
 end
 
 function TCM:HealCmd(target)
-    if self.db.char.health then
-        local heal = math.random(self.db.char.heal);
+    if self.db.char.Character.health then
+        local heal = math.random(self.db.char.Character.heal);
         TCM:heal(heal);
         TCM:Print("Heal: " .. heal);
-        TCM:Print("Healh: " .. self.db.char.health);
+        TCM:Print("Healh: " .. self.db.char.Character.health);
         
         TCM:SendCommMessage("heal", tostring(heal), "WHISPER", target);
     else
@@ -279,7 +280,7 @@ function TCM:HealCmd(target)
 end
 
 function TCM:AttackCmd(target)
-    if self.db.char.health then
+    if self.db.char.Character.health then
         local damage = TCM:Attack(target);
         if damage > 0 then
             TCM:SendCommMessage("attack", tostring(damage), "WHISPER", target);
@@ -295,11 +296,9 @@ function TCM:SlashCmds(input)
     elseif(input == "heal")then
         TCM:HealCmd(UnitName("target"));
     elseif(input == "begin")then
-        TCM:BeginCmd(UnitName("target"));
-        TCM:Print("you have started battle");
-        TCM:Print("use /tcm heal and /tcm attack");
+        TCM:BeginCmd();
     elseif(input == "health")then
-        SendChatMessage("Health: " .. self.db.char.health, "SAY");
+        SendChatMessage("Health: " .. self.db.char.Character.health, "SAY");
     else
         if(TCM.BtnFrame:IsShown())then
             TCM.BtnFrame:Hide();
