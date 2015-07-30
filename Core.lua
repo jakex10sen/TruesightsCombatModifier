@@ -27,16 +27,14 @@ function TCM:InitButton()
 
     -- The code below makes the frame visible, and is not necessary to enable dragging.
     TCM.BtnFrame:SetPoint("CENTER");
-    TCM.BtnFrame:SetWidth(50);
+    TCM.BtnFrame:SetWidth(80);
     TCM.BtnFrame:SetHeight(100);
-    local tex = TCM.BtnFrame:CreateTexture("ARTWORK");
-    tex:SetAllPoints();
-    tex:SetTexture(1.0, 0.5, 0); tex:SetAlpha(0.5);
+    TCM.BtnFrame:SetBackdrop(StaticPopup1:GetBackdrop());
     
     local BeginBtn = CreateFrame("Button", "BeginBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
     BeginBtn:SetWidth(50);
     BeginBtn:SetHeight(25);
-    BeginBtn:SetPoint("TOPLEFT");
+    BeginBtn:SetPoint("CENTER", TCM.BtnFrame, 0, 25);
     BeginBtn:SetMovable(true);
     BeginBtn:SetText("begin");
     BeginBtn:RegisterForClicks("AnyUp");
@@ -47,7 +45,7 @@ function TCM:InitButton()
     local AttackBtn = CreateFrame("Button", "AttackBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
     AttackBtn:SetWidth(50);
     AttackBtn:SetHeight(25);
-    AttackBtn:SetPoint("LEFT");
+    AttackBtn:SetPoint("CENTER");
     AttackBtn:SetMovable(true);
     AttackBtn:SetText("attack");
     AttackBtn:RegisterForClicks("AnyUp");
@@ -62,7 +60,7 @@ function TCM:InitButton()
     local HealBtn = CreateFrame("Button", "HealBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
     HealBtn:SetWidth(50);
     HealBtn:SetHeight(25);
-    HealBtn:SetPoint("BOTTOMLEFT");
+    HealBtn:SetPoint("CENTER", TCM.BtnFrame, 0, -25);
     HealBtn:SetMovable(true);
     HealBtn:SetText("heal");
     HealBtn:RegisterForClicks("AnyUp");
@@ -72,33 +70,59 @@ function TCM:InitButton()
         else
             TCM:HealCmd(UnitName("target"));
         end
-
     end);
-
     TCM.BtnFrame:Hide();
 end
 
 -- UI functions --
+function TCM:TestingUI()
+    MyFrame = CreateFrame("Frame")
+    MyFrame:ClearAllPoints()
+    MyFrame:SetBackdrop(StaticPopup1:GetBackdrop())
+    MyFrame:SetHeight(300)
+    MyFrame:SetWidth(300)
+
+    MyFrame.text = MyFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
+    MyFrame.text:SetAllPoints()
+    MyFrame.text:SetText("YOUR HELP TEXT HERE")
+    MyFrame:SetPoint("CENTER", 0, 0)
+
+    MyFrame.CloseBtn = CreateFrame("Button", "CloseBtn", MyFrame, "UIPanelButtonTemplate");
+    MyFrame.CloseBtn:SetWidth(25);
+    MyFrame.CloseBtn:SetHeight(25);
+    MyFrame.CloseBtn:SetPoint("TOPRIGHT", MyFrame, "TOPRIGHT");
+    MyFrame.CloseBtn:SetMovable(true);
+
+    MyFrame.CloseBtn:RegisterForClicks("AnyUp");
+    MyFrame.CloseBtn:SetScript("OnClick", function()
+        MyFrame:Hide();
+    end);
+end
+
 function TCM:LoadUI(number)
-    
-    TCM.BattleFrame = CreateFrame("Frame", "BattleFrame", UIParent);
+
+    if not TCM.BattleFrame then
+        TCM.BattleFrame = CreateFrame("Frame", "BattleFrame", UIParent);
+    end
     TCM.BattleFrame:SetMovable(true);
+    TCM.BattleFrame:SetResizable(true);
     TCM.BattleFrame:EnableMouse(true);
     TCM.BattleFrame:RegisterForDrag("LeftButton");
     TCM.BattleFrame:SetScript("OnDragStart", TCM.BattleFrame.StartMoving);
     TCM.BattleFrame:SetScript("OnDragStop", TCM.BattleFrame.StopMovingOrSizing);
+    TCM.BattleFrame:SetScript("OnUpdate", function()
+        TCM.BattleFrame:SetSize(125 , ((TCM.BattleFrame:GetNumChildren()) * 10)+25);
+    end);
 
 
     -- The code below makes the frame visible, and is not necessary to enable dragging.
     TCM.BattleFrame:SetPoint("CENTER");
-    TCM.BattleFrame:SetWidth(100);
-    TCM.BattleFrame:SetHeight(100);
-    local tex = TCM.BattleFrame:CreateTexture("ARTWORK");
-    tex:SetAllPoints();
-    tex:SetTexture(1.0, 0.5, 0); tex:SetAlpha(0.5);
+    TCM.BattleFrame:SetHeight(10);
+    TCM.BattleFrame:SetWidth(125);
+    TCM.BattleFrame:SetBackdrop(StaticPopup1:GetBackdrop());
 
     TCM.BattleFrame.StatusBars = {};
-    if IsInGroup() then
+    if not IsInGroup() then
         for i=1, GetNumGroupMembers() do
             local name = GetRaidRosterInfo(i);
             TCM:AddPlayerBar(name);
@@ -106,7 +130,6 @@ function TCM:LoadUI(number)
         for i=1, number do
             TCM:AddBadGuyBar(i);
         end
-        print(TCM:tablelength(TCM.BattleFrame.StatusBars));
     else
         TCM:Print("Not in group");
     end
@@ -119,7 +142,7 @@ function TCM:AddPlayerBar(name)
     TCM.BattleFrame.StatusBars[name]:SetMinMaxValues(0, 6);
     TCM.BattleFrame.StatusBars[name]:SetWidth(100);
     TCM.BattleFrame.StatusBars[name]:SetHeight(10);
-    TCM.BattleFrame.StatusBars[name]:SetPoint("TOP", TCM.BattleFrame, "CENTER", 0, (TCM:tablelength(TCM.BattleFrame.StatusBars)+1) * 10);
+    TCM.BattleFrame.StatusBars[name]:SetPoint("TOP", TCM.BattleFrame, "CENTER", 0, (TCM:tablelength(TCM.BattleFrame.StatusBars)) * 10);
     TCM.BattleFrame.StatusBars[name]:SetStatusBarColor(0,1,0);
 end
 
@@ -128,10 +151,10 @@ function TCM:AddBadGuyBar(number)
     TCM.BattleFrame.StatusBars[index] = CreateFrame("StatusBar", index, TCM.BattleFrame);
     TCM.BattleFrame.StatusBars[index]:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar");
     TCM.BattleFrame.StatusBars[index]:GetStatusBarTexture():SetHorizTile(false);
-    TCM.BattleFrame.StatusBars[index]:SetMinMaxValues(0, 100);
+    TCM.BattleFrame.StatusBars[index]:SetMinMaxValues(0, 4);
     TCM.BattleFrame.StatusBars[index]:SetWidth(100);
     TCM.BattleFrame.StatusBars[index]:SetHeight(10);
-    TCM.BattleFrame.StatusBars[index]:SetPoint("TOP", TCM.BattleFrame, "CENTER", 0, (TCM:tablelength(TCM.BattleFrame.StatusBars)+1) * 10);
+    TCM.BattleFrame.StatusBars[index]:SetPoint("BOTTOM", TCM.BattleFrame, 0, (TCM:tablelength(TCM.BattleFrame.StatusBars)) * 10 + 2);
     TCM.BattleFrame.StatusBars[index]:SetStatusBarColor(1,0,0);
 end
 
@@ -209,7 +232,7 @@ function TCM:HandleAttackFunc(prefix, message, distribution, sender)
         if success then
             if target == UnitName("player") then
                 TCM:Print(from  .. " hit " .. target .. " for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health);
-                SendChatMessage(from  .. " hit you for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health, "RAID");
+                SendChatMessage(from  .. " hit you for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health, "SAY");
                 TCM:TakeDamage(tonumber(tonumber(damage)));
             end
         end
@@ -222,7 +245,7 @@ function TCM:HandleBeginFunc(prefix, message, distribution, sender)
 end
 
 function TCM:MessageReceived(prefix, message, distribution, sender)
-    SendChatMessage("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix, "RAID");
+    SendChatMessage("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix, "SAY");
     -- TCM:Print("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix);
 end
 
@@ -287,7 +310,7 @@ end
 -- slash command handlers --
 function TCM:BeginCmd()
     TCM:begin();
-    if(UnitIsGroupLeader("player"))then
+    if not (UnitIsGroupLeader("player"))then
         TCM:ConfgUI();
         TCM:SendCommMessage("begin", "begin", "RAID");
     else
@@ -331,6 +354,9 @@ function TCM:SlashCmds(input)
         TCM:BeginCmd();
     elseif(input == "health")then
         SendChatMessage("Health: " .. self.db.char.Character.health, "RAID");
+
+    elseif(input == "test")then
+        TCM:TestingUI();
     else
         if(TCM.BtnFrame:IsShown())then
             TCM.BtnFrame:Hide();
