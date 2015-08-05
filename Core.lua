@@ -1,6 +1,6 @@
-
 TCM = LibStub("AceAddon-3.0"):NewAddon("TCM", "AceConsole-3.0", "AceComm-3.0", "AceSerializer-3.0");
 local AceGUI = LibStub("AceGUI-3.0");
+TCM.Channel = "RAID";
 
 function TCM:OnInitialize()
     TCM:InitDB();
@@ -21,15 +21,13 @@ function TCM:InitButton()
     TCM.BtnFrame = CreateFrame("Frame", "BtnFrame", UIParent);
     TCM.BtnFrame:SetMovable(true);
     TCM.BtnFrame:EnableMouse(true);
-    TCM.BtnFrame:RegisterForDrag("LeftButton");
-    TCM.BtnFrame:SetScript("OnDragStart", TCM.BtnFrame.StartMoving);
-    TCM.BtnFrame:SetScript("OnDragStop", TCM.BtnFrame.StopMovingOrSizing);
-
-    -- The code below makes the frame visible, and is not necessary to enable dragging.
     TCM.BtnFrame:SetPoint("CENTER");
     TCM.BtnFrame:SetWidth(80);
     TCM.BtnFrame:SetHeight(100);
     TCM.BtnFrame:SetBackdrop(StaticPopup1:GetBackdrop());
+    TCM.BtnFrame:RegisterForDrag("LeftButton");
+    TCM.BtnFrame:SetScript("OnDragStart", TCM.BtnFrame.StartMoving);
+    TCM.BtnFrame:SetScript("OnDragStop", TCM.BtnFrame.StopMovingOrSizing);
     
     local BeginBtn = CreateFrame("Button", "BeginBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
     BeginBtn:SetWidth(50);
@@ -101,42 +99,42 @@ end
 
 function TCM:LoadFriendUI()
     if not TCM.FriendFrame then
-        TCM.FriendFrame = CreateFrame("Frame", "FreindFrame", UIParent);
+        TCM.FriendFrame = CreateFrame("Frame", "FriendFrame", UIParent);
     end
     TCM.FriendFrame:SetMovable(true);
     TCM.FriendFrame:SetResizable(true);
     TCM.FriendFrame:EnableMouse(true);
+    TCM.FriendFrame:SetPoint("CENTER");
+    TCM.FriendFrame:SetHeight(10);
+    TCM.FriendFrame:SetWidth(125);
+    TCM.FriendFrame:SetBackdrop(StaticPopup1:GetBackdrop());
     TCM.FriendFrame:RegisterForDrag("LeftButton");
     TCM.FriendFrame:SetScript("OnDragStart", TCM.FriendFrame.StartMoving);
     TCM.FriendFrame:SetScript("OnDragStop", TCM.FriendFrame.StopMovingOrSizing);
     TCM.FriendFrame:SetScript("OnUpdate", function()
         TCM.FriendFrame:SetSize(125, ((TCM.FriendFrame:GetNumChildren()) * 10)+25);
     end);
-    TCM.FriendFrame:SetPoint("CENTER");
-    TCM.FriendFrame:SetHeight(10);
-    TCM.FriendFrame:SetWidth(125);
-    TCM.FriendFrame:SetBackdrop(StaticPopup1:GetBackdrop());
 
     TCM.FriendFrame.StatusBars = {};
 end
 
 function TCM:LoadBadGuysUI(number)
     if not TCM.BadGuyFrame then
-        TCM.BadGuyFrame = CreateFrame("Frame", "FreindFrame", UIParent);
+        TCM.BadGuyFrame = CreateFrame("Frame", "BadGuyFrame", UIParent);
     end
     TCM.BadGuyFrame:SetMovable(true);
     TCM.BadGuyFrame:SetResizable(true);
     TCM.BadGuyFrame:EnableMouse(true);
+    TCM.BadGuyFrame:SetPoint("CENTER");
+    TCM.BadGuyFrame:SetHeight(10);
+    TCM.BadGuyFrame:SetWidth(125);
+    TCM.BadGuyFrame:SetBackdrop(StaticPopup1:GetBackdrop());
     TCM.BadGuyFrame:RegisterForDrag("LeftButton");
     TCM.BadGuyFrame:SetScript("OnDragStart", TCM.BadGuyFrame.StartMoving);
     TCM.BadGuyFrame:SetScript("OnDragStop", TCM.BadGuyFrame.StopMovingOrSizing);
     TCM.BadGuyFrame:SetScript("OnUpdate", function()
         TCM.BadGuyFrame:SetSize(125, ((TCM.BadGuyFrame:GetNumChildren()) * 10)+25);
     end);
-    TCM.BadGuyFrame:SetPoint("CENTER");
-    TCM.BadGuyFrame:SetHeight(10);
-    TCM.BadGuyFrame:SetWidth(125);
-    TCM.BadGuyFrame:SetBackdrop(StaticPopup1:GetBackdrop());
 
     TCM.BadGuyFrame.StatusBars = {};
 end
@@ -146,7 +144,7 @@ function TCM:LoadUI(number)
         TCM:LoadFriendUI();
         TCM:LoadBadGuysUI(number);
         for i=1, GetNumGroupMembers() do
-            local name = GetRaidRosterInfo(i);
+            local name = UnitName("raid" .. i);
             TCM:AddPlayerBar(name);
         end
         for i=1, number do
@@ -201,21 +199,18 @@ function TCM:ConfgUI()
 
     -- EditBox for number of enemies --
     TCM.ConfigScreen.EnemyNumEditBox = AceGUI:Create("EditBox");
-
     TCM.ConfigScreen:AddChild(TCM.ConfigScreen.EnemyNumEditBox);
-
 
     -- Submit button --
     TCM.ConfigScreen.SubmitBtn = AceGUI:Create("Button");
     TCM.ConfigScreen.SubmitBtn:SetText("Apply");
     TCM.ConfigScreen.SubmitBtn:SetCallback("OnClick", function(widget)
         --TCM:Print("Num enemies: " .. TCM.ConfigScreen.EnemyNumEditBox:GetText());
-        TCM:LoadUI(tonumber(TCM.ConfigScreen.EnemyNumEditBox:GetText()));
+        local number = tonumber(TCM.ConfigScreen.EnemyNumEditBox:GetText());
+        TCM:LoadUI(number);
+        TCM:SendCommMessage("begin", tostring(number), TCM.Channel);
     end);
-
     TCM.ConfigScreen:AddChild(TCM.ConfigScreen.SubmitBtn);
-
-
 end
 
 -- init functions --
@@ -263,6 +258,7 @@ end
 
 function TCM:HandleBeginFunc(prefix, message, distribution, sender)
     TCM:begin();
+    TCM:LoadUI(tonumber(message));
     TCM:MessageReceived(prefix, message, distribution, sender);
 end
 
@@ -332,9 +328,11 @@ end
 -- slash command handlers --
 function TCM:BeginCmd()
     TCM:begin();
-    if not (UnitIsGroupLeader("player"))then
+    if (UnitIsGroupLeader("player")) then
+        if not IsInRaid() then
+            ConvertToRaid();
+        end
         TCM:ConfgUI();
-        TCM:SendCommMessage("begin", "begin", "RAID");
     else
         TCM:Print("You aren't the leader");
     end
@@ -360,7 +358,7 @@ function TCM:AttackCmd(target)
         local targetPlayer = target;
         if damage > 0 then
             local data = TCM:Serialize(player, damage, targetPlayer);
-            TCM:SendCommMessage("attack", data, "RAID");
+            TCM:SendCommMessage("attack", data, TCM.Channel);
         end
     else
         TCM:Print("use must start a battle with /tcm begin first");
@@ -375,8 +373,7 @@ function TCM:SlashCmds(input)
     elseif(input == "begin")then
         TCM:BeginCmd();
     elseif(input == "health")then
-        SendChatMessage("Health: " .. self.db.char.Character.health, "RAID");
-
+        SendChatMessage("Health: " .. self.db.char.Character.health, TCM.Channel);
     elseif(input == "test")then
         TCM:TestingUI();
     else
@@ -385,7 +382,6 @@ function TCM:SlashCmds(input)
         else
             TCM.BtnFrame:Show();
         end
-
     end
 end
 
