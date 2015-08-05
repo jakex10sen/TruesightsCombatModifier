@@ -99,30 +99,52 @@ function TCM:TestingUI()
     end);
 end
 
-function TCM:LoadUI(number)
-
-    if not TCM.BattleFrame then
-        TCM.BattleFrame = CreateFrame("Frame", "BattleFrame", UIParent);
+function TCM:LoadFriendUI()
+    if not TCM.FriendFrame then
+        TCM.FriendFrame = CreateFrame("Frame", "FreindFrame", UIParent);
     end
-    TCM.BattleFrame:SetMovable(true);
-    TCM.BattleFrame:SetResizable(true);
-    TCM.BattleFrame:EnableMouse(true);
-    TCM.BattleFrame:RegisterForDrag("LeftButton");
-    TCM.BattleFrame:SetScript("OnDragStart", TCM.BattleFrame.StartMoving);
-    TCM.BattleFrame:SetScript("OnDragStop", TCM.BattleFrame.StopMovingOrSizing);
-    TCM.BattleFrame:SetScript("OnUpdate", function()
-        TCM.BattleFrame:SetSize(125 , ((TCM.BattleFrame:GetNumChildren()) * 10)+25);
+    TCM.FriendFrame:SetMovable(true);
+    TCM.FriendFrame:SetResizable(true);
+    TCM.FriendFrame:EnableMouse(true);
+    TCM.FriendFrame:RegisterForDrag("LeftButton");
+    TCM.FriendFrame:SetScript("OnDragStart", TCM.FriendFrame.StartMoving);
+    TCM.FriendFrame:SetScript("OnDragStop", TCM.FriendFrame.StopMovingOrSizing);
+    TCM.FriendFrame:SetScript("OnUpdate", function()
+        TCM.FriendFrame:SetSize(125, ((TCM.FriendFrame:GetNumChildren()) * 10)+25);
     end);
+    TCM.FriendFrame:SetPoint("CENTER");
+    TCM.FriendFrame:SetHeight(10);
+    TCM.FriendFrame:SetWidth(125);
+    TCM.FriendFrame:SetBackdrop(StaticPopup1:GetBackdrop());
 
+    TCM.FriendFrame.StatusBars = {};
+end
 
-    -- The code below makes the frame visible, and is not necessary to enable dragging.
-    TCM.BattleFrame:SetPoint("CENTER");
-    TCM.BattleFrame:SetHeight(10);
-    TCM.BattleFrame:SetWidth(125);
-    TCM.BattleFrame:SetBackdrop(StaticPopup1:GetBackdrop());
+function TCM:LoadBadGuysUI(number)
+    if not TCM.BadGuyFrame then
+        TCM.BadGuyFrame = CreateFrame("Frame", "FreindFrame", UIParent);
+    end
+    TCM.BadGuyFrame:SetMovable(true);
+    TCM.BadGuyFrame:SetResizable(true);
+    TCM.BadGuyFrame:EnableMouse(true);
+    TCM.BadGuyFrame:RegisterForDrag("LeftButton");
+    TCM.BadGuyFrame:SetScript("OnDragStart", TCM.BadGuyFrame.StartMoving);
+    TCM.BadGuyFrame:SetScript("OnDragStop", TCM.BadGuyFrame.StopMovingOrSizing);
+    TCM.BadGuyFrame:SetScript("OnUpdate", function()
+        TCM.BadGuyFrame:SetSize(125, ((TCM.BadGuyFrame:GetNumChildren()) * 10)+25);
+    end);
+    TCM.BadGuyFrame:SetPoint("CENTER");
+    TCM.BadGuyFrame:SetHeight(10);
+    TCM.BadGuyFrame:SetWidth(125);
+    TCM.BadGuyFrame:SetBackdrop(StaticPopup1:GetBackdrop());
 
-    TCM.BattleFrame.StatusBars = {};
-    if not IsInGroup() then
+    TCM.BadGuyFrame.StatusBars = {};
+end
+
+function TCM:LoadUI(number)
+    if IsInGroup() then
+        TCM:LoadFriendUI();
+        TCM:LoadBadGuysUI(number);
         for i=1, GetNumGroupMembers() do
             local name = GetRaidRosterInfo(i);
             TCM:AddPlayerBar(name);
@@ -136,31 +158,30 @@ function TCM:LoadUI(number)
 end
 
 function TCM:AddPlayerBar(name)
-    TCM.BattleFrame.StatusBars[name] = CreateFrame("StatusBar", name, TCM.BattleFrame);
-    TCM.BattleFrame.StatusBars[name]:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar");
-    TCM.BattleFrame.StatusBars[name]:GetStatusBarTexture():SetHorizTile(false);
-    TCM.BattleFrame.StatusBars[name]:SetMinMaxValues(0, 6);
-    TCM.BattleFrame.StatusBars[name]:SetWidth(100);
-    TCM.BattleFrame.StatusBars[name]:SetHeight(10);
-    TCM.BattleFrame.StatusBars[name]:SetPoint("TOP", TCM.BattleFrame, "CENTER", 0, (TCM:tablelength(TCM.BattleFrame.StatusBars)) * 10);
-    TCM.BattleFrame.StatusBars[name]:SetStatusBarColor(0,1,0);
+    TCM.FriendFrame.StatusBars[name] = CreateFrame("StatusBar", name, TCM.FriendFrame);
+    TCM.FriendFrame.StatusBars[name]:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar");
+    TCM.FriendFrame.StatusBars[name]:GetStatusBarTexture():SetHorizTile(false);
+    TCM.FriendFrame.StatusBars[name]:SetMinMaxValues(0, 6);
+    TCM.FriendFrame.StatusBars[name]:SetWidth(100);
+    TCM.FriendFrame.StatusBars[name]:SetHeight(10);
+    TCM.FriendFrame.StatusBars[name]:SetPoint("TOP", TCM.FriendFrame, "CENTER", 0, (TCM:tablelength(TCM.FriendFrame.StatusBars)) * 10);
+    TCM.FriendFrame.StatusBars[name]:SetStatusBarColor(0,1,0);
 end
 
 function TCM:AddBadGuyBar(number)
     local index = "BadGuy" .. number;
-    TCM.BattleFrame.StatusBars[index] = CreateFrame("StatusBar", index, TCM.BattleFrame);
-    TCM.BattleFrame.StatusBars[index]:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar");
-    TCM.BattleFrame.StatusBars[index]:GetStatusBarTexture():SetHorizTile(false);
-    TCM.BattleFrame.StatusBars[index]:SetMinMaxValues(0, 4);
-    TCM.BattleFrame.StatusBars[index]:SetWidth(100);
-    TCM.BattleFrame.StatusBars[index]:SetHeight(10);
-    TCM.BattleFrame.StatusBars[index]:SetPoint("BOTTOM", TCM.BattleFrame, 0, (TCM:tablelength(TCM.BattleFrame.StatusBars)) * 10 + 2);
-    TCM.BattleFrame.StatusBars[index]:SetStatusBarColor(1,0,0);
+    TCM.BadGuyFrame.StatusBars[index] = CreateFrame("StatusBar", index, TCM.BadGuyFrame);
+    TCM.BadGuyFrame.StatusBars[index]:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar");
+    TCM.BadGuyFrame.StatusBars[index]:GetStatusBarTexture():SetHorizTile(false);
+    TCM.BadGuyFrame.StatusBars[index]:SetMinMaxValues(0, 4);
+    TCM.BadGuyFrame.StatusBars[index]:SetWidth(100);
+    TCM.BadGuyFrame.StatusBars[index]:SetHeight(10);
+    TCM.BadGuyFrame.StatusBars[index]:SetPoint("BOTTOM", TCM.BadGuyFrame, 0, (TCM:tablelength(TCM.BadGuyFrame.StatusBars)) * 10 + 2);
+    TCM.BadGuyFrame.StatusBars[index]:SetStatusBarColor(1,0,0);
 end
 
 function TCM:UpdateUI()
-    TCM:Print(TCM.BattleFrame:GetNumChildren());
-    TCM:Print(TCM.BattleFrame:GetNumRegions());
+    TCM:Print("TCM:UpdateUI() called!");
 end
 
 function TCM:ConfgUI()
@@ -207,7 +228,6 @@ function TCM:InitDB()
 end
 
 function TCM:InitComms()
-    
     TCM:RegisterComm("attack", "HandleAttackFunc");
     TCM:RegisterComm("heal", "HandleHealFunc");
     TCM:RegisterComm("begin", "HandleBeginFunc");
@@ -229,7 +249,9 @@ end
 function TCM:HandleAttackFunc(prefix, message, distribution, sender)
     if not sender == UnitName("player") then
         local success, from, damage, target = TCM:Deserialize(message);
-        if success then
+        if not success then
+            TCM:Print("Something happened when Deserializing")
+        else
             if target == UnitName("player") then
                 TCM:Print(from  .. " hit " .. target .. " for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health);
                 SendChatMessage(from  .. " hit you for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health, "SAY");
@@ -366,6 +388,8 @@ function TCM:SlashCmds(input)
 
     end
 end
+
+-- Utility Functions --
 function TCM:tablelength(T)
     local count = 0
     for _ in pairs(T) do count = count + 1 end
