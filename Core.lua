@@ -1,6 +1,7 @@
 TCM = LibStub("AceAddon-3.0"):NewAddon("TCM", "AceConsole-3.0", "AceComm-3.0", "AceSerializer-3.0");
 local AceGUI = LibStub("AceGUI-3.0");
 TCM.Channel = "RAID";
+TCM.GroupType = "raid";
 
 function TCM:OnInitialize()
     TCM:InitDB();
@@ -28,11 +29,14 @@ function TCM:InitButton()
     TCM.BtnFrame:RegisterForDrag("LeftButton");
     TCM.BtnFrame:SetScript("OnDragStart", TCM.BtnFrame.StartMoving);
     TCM.BtnFrame:SetScript("OnDragStop", TCM.BtnFrame.StopMovingOrSizing);
-    
+    TCM.BtnFrame:SetScript("OnUpdate", function()
+        TCM.BtnFrame:SetSize(80, (TCM.BtnFrame:GetNumChildren()*25)+25);
+    end);
+
     local BeginBtn = CreateFrame("Button", "BeginBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
     BeginBtn:SetWidth(50);
     BeginBtn:SetHeight(25);
-    BeginBtn:SetPoint("CENTER", TCM.BtnFrame, 0, 25);
+    BeginBtn:SetPoint("BOTTOM", TCM.BtnFrame, 0, 38);
     BeginBtn:SetMovable(true);
     BeginBtn:SetText("begin");
     BeginBtn:RegisterForClicks("AnyUp");
@@ -40,61 +44,30 @@ function TCM:InitButton()
         TCM:BeginCmd();
     end);
 
-    local AttackBtn = CreateFrame("Button", "AttackBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
-    AttackBtn:SetWidth(50);
-    AttackBtn:SetHeight(25);
-    AttackBtn:SetPoint("CENTER");
-    AttackBtn:SetMovable(true);
-    AttackBtn:SetText("attack");
-    AttackBtn:RegisterForClicks("AnyUp");
-    AttackBtn:SetScript("OnClick", function()
-        if not UnitName("target") then
-            TCM:Print("No target found");
-        else
-            TCM:AttackCmd(UnitName("target"));
+    local NextBtn = CreateFrame("Button", "NextBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
+    NextBtn:SetSize(50, 25);
+    NextBtn:SetPoint("BOTTOM", TCM.BtnFrame, 0, 13);
+    NextBtn:SetMovable(true);
+    NextBtn:SetText("next");
+    NextBtn:RegisterForClicks("AnyUp");
+    NextBtn:SetScript("OnClick", function()
+        if (UnitIsGroupLeader("player")) then
+            TCM:Print("Next button not ready yet");
         end
     end);
 
-    local HealBtn = CreateFrame("Button", "HealBtn", TCM.BtnFrame, "UIPanelButtonTemplate");
-    HealBtn:SetWidth(50);
-    HealBtn:SetHeight(25);
-    HealBtn:SetPoint("CENTER", TCM.BtnFrame, 0, -25);
-    HealBtn:SetMovable(true);
-    HealBtn:SetText("heal");
-    HealBtn:RegisterForClicks("AnyUp");
-    HealBtn:SetScript("OnClick", function()
-        if not UnitName("target") then
-            TCM:Print("No target found");
-        else
-            TCM:HealCmd(UnitName("target"));
-        end
-    end);
     TCM.BtnFrame:Hide();
 end
 
 -- UI functions --
 function TCM:TestingUI()
-    MyFrame = CreateFrame("Frame")
-    MyFrame:ClearAllPoints()
-    MyFrame:SetBackdrop(StaticPopup1:GetBackdrop())
-    MyFrame:SetHeight(300)
-    MyFrame:SetWidth(300)
+    for k in pairs(TCM.FriendFrame.StatusBars) do
+        TCM:Print(k .. " = " .. TCM.FriendFrame.StatusBars[k]);
+    end
+    for k in pairs(TCM.BadGuyFrame.StatusBars) do
+        TCM:Print(k .. " = " .. TCM.BadGuyFrame.StatusBars[k])
+    end
 
-    MyFrame.text = MyFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
-    MyFrame.text:SetAllPoints()
-    MyFrame.text:SetText("YOUR HELP TEXT HERE")
-    MyFrame:SetPoint("CENTER", 0, 0)
-
-    MyFrame.CloseBtn = CreateFrame("Button", "CloseBtn", MyFrame, "UIPanelButtonTemplate");
-    MyFrame.CloseBtn:SetWidth(25);
-    MyFrame.CloseBtn:SetHeight(25);
-    MyFrame.CloseBtn:SetPoint("TOPRIGHT", MyFrame, "TOPRIGHT");
-    MyFrame.CloseBtn:SetMovable(true);
-
-    MyFrame.CloseBtn:RegisterForClicks("AnyUp");
-    MyFrame.CloseBtn:SetScript("OnClick", function()
-        MyFrame:Hide();
-    end);
 end
 
 function TCM:LoadFriendUI()
@@ -118,7 +91,7 @@ function TCM:LoadFriendUI()
     TCM.FriendFrame.StatusBars = {};
 end
 
-function TCM:LoadBadGuysUI(number)
+function TCM:LoadBadGuysUI()
     if not TCM.BadGuyFrame then
         TCM.BadGuyFrame = CreateFrame("Frame", "BadGuyFrame", UIParent);
     end
@@ -133,18 +106,41 @@ function TCM:LoadBadGuysUI(number)
     TCM.BadGuyFrame:SetScript("OnDragStart", TCM.BadGuyFrame.StartMoving);
     TCM.BadGuyFrame:SetScript("OnDragStop", TCM.BadGuyFrame.StopMovingOrSizing);
     TCM.BadGuyFrame:SetScript("OnUpdate", function()
-        TCM.BadGuyFrame:SetSize(125, ((TCM.BadGuyFrame:GetNumChildren()) * 10)+25);
+        TCM.BadGuyFrame:SetSize(125, ((TCM.BadGuyFrame:GetNumChildren()) * 10)+40);
     end);
-
+    local AttackBtn = CreateFrame("Button", "AttackBtn", TCM.BadGuyFrame, "UIPanelButtonTemplate");
+    AttackBtn:SetSize(100, 25);
+    AttackBtn:SetPoint("BOTTOM", TCM.BadGuyFrame, 0, 12);
+    AttackBtn:SetMovable(true);
+    AttackBtn:SetText("attack");
+    AttackBtn:RegisterForClicks("AnyUp");
+    AttackBtn:SetScript("OnClick", function()
+        if not UnitName("target") then
+            TCM:Print("No target found");
+        else
+            TCM:AttackCmd(UnitName("target"));
+        end
+    end);
     TCM.BadGuyFrame.StatusBars = {};
+    TCM.BadGuyFrame.CheckButtons = {};
 end
 
 function TCM:LoadUI(number)
     if IsInGroup() then
+        if IsInRaid() then
+            TCM.Channel = "RAID";
+            TCM.PartyType = "raid";
+        else
+            TCM.Channel = "PARTY";
+            TCM.GroupType = "party";
+        end
         TCM:LoadFriendUI();
-        TCM:LoadBadGuysUI(number);
-        for i=1, GetNumGroupMembers() do
-            local name = UnitName("raid" .. i);
+        TCM:LoadBadGuysUI();
+        TCM:AddPlayerBar(GetUnitName("player"));
+        for i=1, GetNumGroupMembers()-1 do
+            TCM:Print(GetNumGroupMembers());
+            local name = GetUnitName(TCM.GroupType .. i);
+            TCM:Print("Creating bar for: " .. name .. " " .. TCM.GroupType .. " member: " .. i);
             TCM:AddPlayerBar(name);
         end
         for i=1, number do
@@ -162,7 +158,7 @@ function TCM:AddPlayerBar(name)
     TCM.FriendFrame.StatusBars[name]:SetMinMaxValues(0, 6);
     TCM.FriendFrame.StatusBars[name]:SetWidth(100);
     TCM.FriendFrame.StatusBars[name]:SetHeight(10);
-    TCM.FriendFrame.StatusBars[name]:SetPoint("TOP", TCM.FriendFrame, "CENTER", 0, (TCM:tablelength(TCM.FriendFrame.StatusBars)) * 10);
+    TCM.FriendFrame.StatusBars[name]:SetPoint("BOTTOM", TCM.FriendFrame, 0, (TCM:tablelength(TCM.FriendFrame.StatusBars)) * 10 + 2);
     TCM.FriendFrame.StatusBars[name]:SetStatusBarColor(0,1,0);
 end
 
@@ -174,12 +170,25 @@ function TCM:AddBadGuyBar(number)
     TCM.BadGuyFrame.StatusBars[index]:SetMinMaxValues(0, 4);
     TCM.BadGuyFrame.StatusBars[index]:SetWidth(100);
     TCM.BadGuyFrame.StatusBars[index]:SetHeight(10);
-    TCM.BadGuyFrame.StatusBars[index]:SetPoint("BOTTOM", TCM.BadGuyFrame, 0, (TCM:tablelength(TCM.BadGuyFrame.StatusBars)) * 10 + 2);
+    TCM.BadGuyFrame.StatusBars[index]:SetPoint("BOTTOM", TCM.BadGuyFrame, 0, (TCM:tablelength(TCM.BadGuyFrame.StatusBars)) * 10 + 27);
     TCM.BadGuyFrame.StatusBars[index]:SetStatusBarColor(1,0,0);
 end
 
 function TCM:UpdateUI()
-    TCM:Print("TCM:UpdateUI() called!");
+    if TCM.BadGuyFrame then
+        if TCM.BadGuyFrame.StatusBars then
+            for key, values in pairs(TCM.BadGuyFrame.StatusBars) do
+                TCM:Print(key);
+            end
+        end
+    end
+    if TCM.FriendFrame then
+        if TCM.FriendFrame.StatusBars then
+            for key, values in pairs(TCM.FriendFrame.StatusBars) do
+                TCM:Print(key);
+            end
+        end
+    end
 end
 
 function TCM:ConfgUI()
@@ -244,12 +253,14 @@ end
 function TCM:HandleAttackFunc(prefix, message, distribution, sender)
     if not sender == UnitName("player") then
         local success, from, damage, target = TCM:Deserialize(message);
+        TCM:Print(success);
         if not success then
             TCM:Print("Something happened when Deserializing")
         else
+            SendChatMessage(from  .. " hit you for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health, TCM.Channel);
             if target == UnitName("player") then
                 TCM:Print(from  .. " hit " .. target .. " for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health);
-                SendChatMessage(from  .. " hit you for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health, "SAY");
+                SendChatMessage(from  .. " hit you for " .. damage .. " points of damage you are now at " .. self.db.char.Character.health, TCM.Channel);
                 TCM:TakeDamage(tonumber(tonumber(damage)));
             end
         end
@@ -257,13 +268,19 @@ function TCM:HandleAttackFunc(prefix, message, distribution, sender)
 end
 
 function TCM:HandleBeginFunc(prefix, message, distribution, sender)
-    TCM:begin();
-    TCM:LoadUI(tonumber(message));
     TCM:MessageReceived(prefix, message, distribution, sender);
+    local player = tostring(GetUnitName("player"));
+    if sender == player then
+        TCM:Print("Your message got sent to you");
+    else
+        TCM:begin();
+        TCM:LoadUI(tonumber(message));
+    end
+
 end
 
 function TCM:MessageReceived(prefix, message, distribution, sender)
-    SendChatMessage("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix, "SAY");
+    SendChatMessage("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix, TCM.Channel);
     -- TCM:Print("'" .. message .. "' recieved from '" .. sender .. "' via " .. distribution .. " prefixed with " .. prefix);
 end
 
@@ -329,9 +346,7 @@ end
 function TCM:BeginCmd()
     TCM:begin();
     if (UnitIsGroupLeader("player")) then
-        if not IsInRaid() then
-            ConvertToRaid();
-        end
+
         TCM:ConfgUI();
     else
         TCM:Print("You aren't the leader");
