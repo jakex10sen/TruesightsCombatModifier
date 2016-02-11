@@ -191,6 +191,11 @@ function TCM:AddBadGuyBar(number)
     TCM.BadGuyFrame.CheckButtons[index] = CreateFrame("CheckButton", index, TCM.BadGuyFrame, "UICheckButtonTemplate");
     TCM.BadGuyFrame.CheckButtons[index]:SetSize(25, 25);
     TCM.BadGuyFrame.CheckButtons[index]:SetPoint("BOTTOMLEFT", TCM.BadGuyFrame, 115, TCM:tablelength(TCM.BadGuyFrame.StatusBars) * TCM.BadGuyFrame.StatusBars[index]:GetHeight() + 13);
+    TCM.BadGuyFrame.CheckButtons[index]:SetScript("PreClick", function()
+        for k in pairs(TCM.BadGuyFrame.CheckButtons) do
+            TCM.BadGuyFrame.CheckButtons[k]:SetChecked(false);
+        end
+    end);
 end
 
 function TCM:UpdateUI()
